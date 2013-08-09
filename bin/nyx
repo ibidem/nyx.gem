@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+
+require 'hola'
+puts Nyx.hi(ARGV[0])
