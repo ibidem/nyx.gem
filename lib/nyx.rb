@@ -1,5 +1,5 @@
 class Nyx
 	def self.hi
-		puts "Hello world!"
+		"hello nyx"
 	end
 end
