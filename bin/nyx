@@ -1,4 +1,27 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
 
 require 'nyx'
-puts Nyx.hi(ARGV[0])
+
+if ARGV.length > 0
+	nyx = Nyx.new;
+	actual_command = ARGV.shift
+	command = actual_command.gsub ':', '_'
+	if nyx.respond_to? command
+		nyx.send command, ARGV
+	else # ! nyx.respond_to? command
+		puts " err: unknown command #{actual_command}"
+	end#if
+else # ARGV.length == 0
+
+puts
+puts <<eos
+ Commands
+ ------------------------------------------------------------------------------
+   nyx watch:scripts <dir>    - initiate script monitors
+   nyx compile:scripts <dir>  - compile scripts
+   nyx watch:style <dir>      - initiate style monitors
+   nyx compile:style <dir>    - compile style
+eos
+
+end#if
