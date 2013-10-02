@@ -1,17 +1,111 @@
 # native
 require 'Logger'
 require 'fileutils'
+require 'net/http'
+require 'fileutils'
 
 # gems
 require 'git'
 require 'json'
+require 'zip/zipfilesystem'
+require 'fssm'
 
 class Nyx
 
-	VERSION = '1.1.0'
+	VERSION = '1.2.0'
 
 	def compile_scripts(args = nil)
-		puts "  todo: compile scripts code"
+		
+		# @todo CLEANUP properly read "silent" parameter
+
+		if args != nil
+			if args.length != 0
+				dirpath = args[0].sub(/(\/)+$/,'')+'/'
+				silent = false
+			else # no parameters, assume .
+				dirpath = './'
+				silent = false
+			end#if
+		else # direct invokation
+			dirpath = './'
+			silent = false
+		end#if
+
+		dirpath = File.expand_path(dirpath) + '/'
+
+		if ! File.exist? dirpath
+			puts '  Err: target directory does not exist.'
+			return;
+		end#if
+
+		conf = self.mjolnir_config(dirpath, '+scripts.php');
+
+		self.do_cleanup_scripts dirpath, conf, silent
+
+		self.ensure_closure_compiler(dirpath)
+
+		puts 
+		puts " Recompiling..."
+		puts " ----------------------------------------------------------------------- "
+		conf = self.read_script_configuration(dirpath);
+		self.recompile_scripts(conf, dirpath);
+		puts " >>> all files regenarated "
+
+	end#def
+
+	def read_script_configuration(dirpath)
+		conf = self.mjolnir_config(dirpath, '+scripts.php');
+
+		if conf['targeted-common'] == nil
+			conf['targeted-common'] = [];
+		else # not nil
+			conf['targeted-common'] = conf['targeted-common'].find_all do |item| 
+				item !~ /(^[a-z]+:\/\/|^\/\/).*$/ 
+			end#find_all
+		end#def
+
+		# remove aliased keys
+		conf['targeted-mapping'].each do |key, files|
+			if files.is_a? String
+				conf['targeted-mapping'].delete(key);
+			end#if
+		end#each
+
+		# include common files
+		conf['targeted-mapping'].each do |key, files|
+			files = files.find_all do |item| 
+				item !~ /(^[a-z]+:\/\/|^\/\/).*$/ 
+			end#find_all
+			conf['targeted-mapping'][key] = conf['targeted-common'].clone;
+			files.each do |file|
+				if ( ! conf['targeted-mapping'][key].include?(file))
+					conf['targeted-mapping'][key].push(file)
+				end#if
+			end#each
+		end#each
+
+		# convert to paths
+		conf['targeted-mapping'].each do |key, files|
+			files = files.find_all do |item| 
+				item !~ /(^[a-z]+:\/\/|^\/\/).*$/ 
+			end#find_all
+			files.collect! do |file| 
+				'src/'+file+'.js'; 
+			end#collect
+			conf['targeted-mapping'][key] = files
+		end#each
+
+		# convert to paths
+		files = conf['complete-mapping']
+		files = files.find_all do |item| 
+			item !~ /(^[a-z]+:\/\/|^\/\/).*$/ 
+		end#find_all
+		files.collect! do |file| 
+			'src/'+file+'.js'; 
+		end#collect
+		conf['complete-mapping'] = files
+
+		return conf
 	end#def
 
 	def watch_scripts(args = nil)
@@ -146,7 +240,54 @@ class Nyx
 		end#if
 	end#def
 
+	def do_cleanup_scripts(dirpath, conf, silent)
+		if ( ! silent)
+			puts
+		end#if
+
+		basedir = dirpath.gsub /\/$/, ''
+
+		# cleanup config
+		conf['root'].gsub! /[\/\\]$/, ''
+		conf['sources'].gsub! /[\/\\]$/, ''
+
+		rootdir = basedir+'/'+conf['root'];
+
+		self.purge_dir(rootdir)
+
+		# copy all files to the root
+		srcdir = basedir+'/'+conf['sources'];
+
+		Dir["#{srcdir}/**/*"].each do |file|
+			if (file.to_s.gsub(srcdir.to_s, '') !~ /\/(test|tests|docs|demos|examples|demo|example)(\/|$)/)
+				if file !~ /^\..*$/ && file !~ /^.*\.(js|json)$/ &&
+					rootfile = rootdir + (file.gsub srcdir, '')
+					# check if file is non-empty directory
+					if File.directory?(file) && ! (Dir.entries(file) - %w[ . .. ]).empty?
+						if ( ! silent)
+							puts "   moving  #{file.gsub(basedir, '')} => #{rootfile.gsub(basedir, '')}"
+						end#if
+						FileUtils.cp_r(file, rootfile)
+					else # file
+						if ( ! silent)
+							puts "   moving  #{file.gsub(basedir, '')} => #{rootfile.gsub(basedir, '')}"
+						end#if
+						FileUtils.cp(file, rootfile)
+					end#if
+				end#if
+			end#if
+		end#each
+
+		if ( ! silent)
+			puts
+		end#if
+	end#def
+
 	def do_cleanup_style(dirpath, conf, silent)
+		if ( ! silent)
+			puts
+		end#if
+
 		basedir = File.expand_path(dirpath)
 
 		# cleanup config
@@ -166,7 +307,7 @@ class Nyx
 					rootfile = rootdir + (file.gsub srcdir, '')
 					# check if file is non-empty directory
 					if File.directory?(file) && ! (Dir.entries(file) - %w[ . .. ]).empty?
-						if (silent)
+						if ( ! silent)
 							puts "   moving  #{file.gsub(basedir, '')} => #{rootfile.gsub(basedir, '')}"
 						end#if
 						if ! File.exist? rootfile
@@ -176,9 +317,9 @@ class Nyx
 							rescue
 								puts "    failed to copy directory!"
 							end#rescue
-						end
+						end#if
 					elsif ! File.directory?(file)
-						if (silent)
+						if ( ! silent)
 							puts "   moving  #{file.gsub(basedir, '')} => #{rootfile.gsub(basedir, '')}"
 						end#if
 						begin
@@ -191,14 +332,111 @@ class Nyx
 			end#if
 		end#each
 
-		if (silent)
+		if ( ! silent)
 			puts
+		end#if
+	end#def
+
+	def ensure_closure_compiler(basedir)
+		# ensure closure compiler jar is present
+		tmpdir = basedir.gsub(/[\/\\]$/, '') + '/bin/tmp'
+		if ! File.exists? tmpdir + '/compiler.jar'
+			Dir.chdir tmpdir
+			if ! File.exists? tmpdir+"/closure.zip"
+				download("closure-compiler.googlecode.com", "/files/compiler-latest.zip", tmpdir+"/closure.zip")
+			end
+			Zip::ZipFile.open(tmpdir+"/closure.zip") do |zipfile|
+				zipfile.each do |file|
+					if file.name == 'compiler.jar'
+						puts "extracting #{file}"
+						zipfile.extract(file.name, tmpdir + '/compiler.jar')
+					end#if
+				end#each
+			end#open
+		end#def
+		Dir.chdir basedir
+	end#def
+
+	def recompile_scripts(conf, dirpath)
+		if (conf['mode'] == 'complete')
+			self.regenerate_scripts('master', conf['complete-mapping'], conf)
+		else # targeted mode
+			conf['targeted-mapping'].each do |key, files|
+				self.regenerate_scripts(key, files, conf)
+			end#each
+		end#if
+	end#def
+
+	def regenerate_scripts(key, files, conf)
+		if conf['closure.flags'] != nil
+			compiler_options = conf['closure.flags'].join ' '
+		else # no flags
+			compiler_options = ''
+		end#if
+
+		rootdir = conf['root'];
+		if files.size > 0
+			puts " compiling #{key}"
+			`java -jar bin/tmp/compiler.jar #{compiler_options} --js #{files.join(' ')} --js_output_file ./#{rootdir}#{key}.min.js --create_source_map ./#{rootdir}#{key}.min.js.map --source_map_format=V3`;
 		end
+	end#def
+
+	def process_scripts(r, conf)
+
+		if r.eql? '+scripts.php'
+			puts ' >>> recompiling all...'
+			# reload confuration
+			conf = self.read_script_configuration(dirpath);
+			if conf['mode'] == 'complete'
+				self.regenerate_scripts('master', conf['complete-mapping'])
+			else # non-complete mode
+				# regenerate all
+				conf['targeted-mapping'].each do |key, files|
+					self.regenerate_scripts(key, files)
+				end#each
+			end#if
+		end
+
+		if conf['mode'] == 'complete'
+		
+			conf['complete-mapping'].each do |file|
+				if file.eql? r
+					puts " >>> recompiling [complete-script]"
+					# regenerate the closure
+					self.recompile_scripts(conf, dirpath)
+					break;
+				end#if
+			end#each
+
+		else # non-complete mode
+
+			# search configuration for file
+			conf['targeted-mapping'].each do |key, files|
+				files.each do |file|
+					if file.eql? r
+						puts " >>> recompiling [#{key}]"
+						# regenerate the closure
+						self.regenerate_scripts(key, files);
+					end#if
+				end#each
+			end#each
+			
+		end#if
+
 	end#def
 
 #
 # Helpers
 #
+
+	def download(domain, file, to)
+		Net::HTTP.start(domain) do |http|
+			resp = http.get(file)
+			open(to, "wb") do |file|
+				file.write(resp.body)
+			end#open
+		end#http.start
+	end#def
 
 	def mjolnir_config(path, configname)
 		# located mjolnir.php or etc/mjolnir.php
@@ -211,7 +449,7 @@ class Nyx
 			self.fail 'Failed to locate mjolnir bootstrap file.'
 		end#if
 
-		json_config = `php -r "chdir('#{path}'); require '#{bootstrap_path}'; echo json_encode(include '#{configname}');"`;
+		json_config = `php -r "chdir('#{path}'); require '#{bootstrap_path}'; echo json_encode(include '#{configname}');"`
 		return JSON.parse json_config
 	end#def
 
@@ -267,7 +505,6 @@ class Nyx
 
 	def fail(msg)
 		puts "  Err: #{msg}"
-
 	end#def
 
 end#class
