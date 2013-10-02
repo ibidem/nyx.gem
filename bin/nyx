@@ -18,6 +18,8 @@ puts
 puts <<eos
  Commands
  ------------------------------------------------------------------------------
+   nyx version                - current interface version
+   nyx compile [<dir>]        - builds nyx.json from the directory
    nyx watch:scripts <dir>    - initiate script monitors
    nyx compile:scripts <dir>  - compile scripts
    nyx watch:style <dir>      - initiate style monitors
