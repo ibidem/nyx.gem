@@ -23,16 +23,22 @@ gem install nyx
 
 	"cores": [
 		{
-			"repo": "https://github.com/alademann/sass-bootstrap.git",
+			"repo": "https://github.com/twbs/bootstrap.git",
 			"path": "src/vendor/twbs",
-			"version": "v3.0.0_sass",
-			"keep": ["sass", "fonts", "README.md", "LICENSE"]
+			"version": "v3.0.0",
+			"keep": ["js", "README.md", "LICENSE"],
+			"remove": ["js/tests", "js/.jshintrc"]
 		},
 		{
-			"repo": "https://github.com/FortAwesome/Font-Awesome.git",
-			"path": "src/vendor/fontawesome",
-			"version": "v3.2.1",
-			"keep": ["scss", "font", "README.md"]
+			"repo": "https://github.com/ibidem/mjolnir-backbone.git",
+			"path": "src/app/extentions/mjolnir",
+			"version": "1.0.0",
+			"ensure": {
+				"dependencies/templates": "../templates/extentions",
+				"dependencies/packages": "src/packages",
+				"dependencies/widgets": "src/widgets"
+			},
+			"remove": ["dependencies", ".gitignore", ".gitattributes"]
 		}
 	]
 }
@@ -64,7 +70,7 @@ Supported nyx.json integration options:
 
  4. `refactor`, given a hash of string to string association, searches and
     replaces the given string in all files; if the string starts with a / then
-    it is assumed to be a regular expression
+    it is assumed to be a regular expression **[current not available]**
 
  3. `remove`, deletes the given files; used for cases where `keep` isn't viable
 
