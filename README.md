@@ -1,19 +1,19 @@
 **Nyx** is a support library (gem) for Ibidem projects.
 
-Installing
-
-```
-gem install nyx
-```
-
-You may need to have the ruby dev tools for some dependencies.
-
 The tool is designed to be an integration tool, rather then a retrieval tool. 
 While it will fetch the necesary files for you, it's main purpose is to manipulate
 and clean up those files to work as desired in the system.
 
 Nyx also serves to centralize general purpose scripting, such as javascript/scss 
 build processes, watchers, etc
+
+## Installing
+
+```bash
+gem install nyx
+```
+
+*You may need to have the ruby dev tools for some dependencies.*
 
 ## Sample configuration
 
