@@ -12,10 +12,10 @@ require 'fssm'
 
 class Nyx
 
-	VERSION = '1.2.0'
+	VERSION = '1.3.0'
 
 	def compile_scripts(args = nil)
-		
+
 		# @todo CLEANUP properly read "silent" parameter
 
 		if args != nil
@@ -44,7 +44,7 @@ class Nyx
 
 		self.ensure_closure_compiler(dirpath)
 
-		puts 
+		puts
 		puts " Recompiling..."
 		puts " ----------------------------------------------------------------------- "
 		conf = self.read_script_configuration(dirpath);
@@ -59,8 +59,8 @@ class Nyx
 		if conf['targeted-common'] == nil
 			conf['targeted-common'] = [];
 		else # not nil
-			conf['targeted-common'] = conf['targeted-common'].find_all do |item| 
-				item !~ /(^[a-z]+:\/\/|^\/\/).*$/ 
+			conf['targeted-common'] = conf['targeted-common'].find_all do |item|
+				item !~ /(^[a-z]+:\/\/|^\/\/).*$/
 			end#find_all
 		end#def
 
@@ -73,8 +73,8 @@ class Nyx
 
 		# include common files
 		conf['targeted-mapping'].each do |key, files|
-			files = files.find_all do |item| 
-				item !~ /(^[a-z]+:\/\/|^\/\/).*$/ 
+			files = files.find_all do |item|
+				item !~ /(^[a-z]+:\/\/|^\/\/).*$/
 			end#find_all
 			conf['targeted-mapping'][key] = conf['targeted-common'].clone;
 			files.each do |file|
@@ -86,22 +86,22 @@ class Nyx
 
 		# convert to paths
 		conf['targeted-mapping'].each do |key, files|
-			files = files.find_all do |item| 
-				item !~ /(^[a-z]+:\/\/|^\/\/).*$/ 
+			files = files.find_all do |item|
+				item !~ /(^[a-z]+:\/\/|^\/\/).*$/
 			end#find_all
-			files.collect! do |file| 
-				'src/'+file+'.js'; 
+			files.collect! do |file|
+				'src/'+file+'.js';
 			end#collect
 			conf['targeted-mapping'][key] = files
 		end#each
 
 		# convert to paths
 		files = conf['complete-mapping']
-		files = files.find_all do |item| 
-			item !~ /(^[a-z]+:\/\/|^\/\/).*$/ 
+		files = files.find_all do |item|
+			item !~ /(^[a-z]+:\/\/|^\/\/).*$/
 		end#find_all
-		files.collect! do |file| 
-			'src/'+file+'.js'; 
+		files.collect! do |file|
+			'src/'+file+'.js';
 		end#collect
 		conf['complete-mapping'] = files
 
@@ -213,13 +213,13 @@ class Nyx
 			filecount = Dir["#{srcpath}/**/*"].length
 			fileidx = 0
 			removed = 0
-			print "   - keep: #{fileidx} files processed (#{removed} removed)"
+			print "   - keep: #{fileidx} files processed (#{removed} deleted)"
 			Dir.glob("#{srcpath}/**/*", File::FNM_DOTMATCH) do |file|
 				basename = File.basename(file)
 				next if basename == '.' or basename == '..'
 				fileidx += 1
-				print (' ' * 79) + "\r"
-				print "   - keep: #{fileidx} files processed (#{removed} removed)"
+				print (' ' * 256) + "\r"
+				print "   - keep: #{fileidx} files processed (#{removed} deleted)"
 				filepath = File.expand_path(file)
 				filesubpath = filepath.sub(srcpath, '').gsub(/^\//, '')
 
@@ -238,6 +238,56 @@ class Nyx
 			end#glob
 			puts
 		end#if
+
+		# process "ensure" rules
+		if conf.has_key? 'ensure'
+			srcpath = File.expand_path(corepath) + '/'
+			ensure_rules = conf['ensure']
+			print "   - ensuring files"
+			ensure_rules.each do |depfiles, srcfiles|
+				depfilespath = srcpath + depfiles.sub(/\/$/, '') + '/'
+				srcfilespath = srcfiles.sub(/\/$/, '')
+				Dir.glob("#{depfilespath}**/*", File::FNM_DOTMATCH) do |file|
+					# skip parent and self symbols
+					basename = File.basename(file)
+					next if basename == '.' or basename == '..'
+					# compute file paths
+					filepath = File.expand_path(file)
+					filesubpath = filepath.sub(depfilespath, '')
+					srcfile = srcfilespath + '/' + filesubpath
+					# skip directories
+					next if File.directory?(filepath)
+					# progress info
+					print (' ' * 256) + "\r"
+					prettysubpath = filepath.sub(srcpath, '')
+					print "   - ensure: #{prettysubpath}"
+					# write missing file
+					if ! File.exist?(srcfile)
+						text = File.read filepath
+						FileUtils.mkpath File.dirname(srcfile)
+						File.write srcfile, text
+					end#if
+				end#glob
+			end#each
+			print (' ' * 256) + "\r"
+			puts "   - ensure: all dependencies resolved"
+		end#if
+
+		# process "remove" rules
+		if conf.has_key? 'remove'
+			removed = 0
+			srcpath = File.expand_path(corepath) + '/'
+			conf['remove'].each do |file|
+				filepath = srcpath + file
+				if File.exist? filepath
+					removed += 1
+					FileUtils.rm_rf filepath
+				end#if
+			end#each
+			files_tr = removed != 1 ? 'files' : 'file';
+			puts "   - remove: #{removed} #{files_tr} deleted"
+		end#if
+
 	end#def
 
 	def do_cleanup_scripts(dirpath, conf, silent)
@@ -398,7 +448,7 @@ class Nyx
 		end
 
 		if conf['mode'] == 'complete'
-		
+
 			conf['complete-mapping'].each do |file|
 				if file.eql? r
 					puts " >>> recompiling [complete-script]"
@@ -420,7 +470,7 @@ class Nyx
 					end#if
 				end#each
 			end#each
-			
+
 		end#if
 
 	end#def
