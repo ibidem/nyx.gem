@@ -66,5 +66,5 @@ Supported nyx.json integration options:
     replaces the given string in all files; if the string starts with a / then
     it is assumed to be a regular expression
 
- 3. `delete` removes the given files; used for cases where `keep` isn't viable
+ 3. `remove`, deletes the given files; used for cases where `keep` isn't viable
 
