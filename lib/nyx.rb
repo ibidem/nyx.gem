@@ -56,6 +56,26 @@ class Nyx
 	def read_script_configuration(dirpath)
 		conf = self.mjolnir_config(dirpath, '+scripts.php');
 
+		# normalize targeted common
+		if ! conf['targeted-common'].is_a?(Array)
+			temp = [];
+			conf['targeted-common'].each do |key, file|
+				temp.push(file)
+			end#each
+			conf['targeted-common'] = temp;
+		end#if
+
+		# normalize targeted mapping
+		conf['targeted-mapping'].each do |key, files|
+			if ! files.is_a?(Array) && ! files.is_a?(String)
+				temp = [];
+				files.each do |key, file|
+					temp.push(file)
+				end#each
+				conf['targeted-mapping'][key] = temp;
+			end#if
+		end#each
+
 		if conf['targeted-common'] == nil
 			conf['targeted-common'] = [];
 		else # not nil
