@@ -70,7 +70,7 @@ Supported nyx.json integration options:
 
  4. `refactor`, given a hash of string to string association, searches and
     replaces the given string in all files; if the string starts with a / then
-    it is assumed to be a regular expression **[current not available]**
+    it is assumed to be a regular expression **[currently not available]**
 
  3. `remove`, deletes the given files; used for cases where `keep` isn't viable
 

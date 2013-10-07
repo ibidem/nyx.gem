@@ -12,7 +12,7 @@ require 'fssm'
 
 class Nyx
 
-	VERSION = '1.3.0'
+	VERSION = '1.3.1'
 
 	def compile_scripts(args = nil)
 
@@ -109,10 +109,18 @@ class Nyx
 			files = files.find_all do |item|
 				item !~ /(^[a-z]+:\/\/|^\/\/).*$/
 			end#find_all
-			files.collect! do |file|
+			cleaned_files = []
+			files.each do |key, value|
+				if value.kind_of? Array
+					cleaned_files.push value[1]
+				else # not array
+					cleaned_files.push value
+				end#if
+			end#each
+			cleaned_files.collect! do |file|
 				'src/'+file+'.js';
 			end#collect
-			conf['targeted-mapping'][key] = files
+			conf['targeted-mapping'][key] = cleaned_files
 		end#each
 
 		# convert to paths
@@ -120,10 +128,18 @@ class Nyx
 		files = files.find_all do |item|
 			item !~ /(^[a-z]+:\/\/|^\/\/).*$/
 		end#find_all
-		files.collect! do |file|
+		cleaned_files = []
+		files.each do |key, value|
+			if value.kind_of? Array
+				cleaned_files.push value[1]
+			else # not array
+				cleaned_files.push value
+			end#if
+		end#each
+		cleaned_files.collect! do |file|
 			'src/'+file+'.js';
 		end#collect
-		conf['complete-mapping'] = files
+		conf['complete-mapping'] = cleaned_files
 
 		return conf
 	end#def
