@@ -12,7 +12,7 @@ require 'fssm'
 
 class Nyx
 
-	VERSION = '1.3.1'
+	VERSION = '1.3.3'
 
 	def compile_scripts(args = nil)
 
@@ -110,7 +110,7 @@ class Nyx
 				item !~ /(^[a-z]+:\/\/|^\/\/).*$/
 			end#find_all
 			cleaned_files = []
-			files.each do |key, value|
+			files.each do |value|
 				if value.kind_of? Array
 					cleaned_files.push value[1]
 				else # not array
