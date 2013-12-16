@@ -12,7 +12,7 @@ require 'fssm'
 
 class Nyx
 
-	VERSION = '1.3.3'
+	VERSION = '1.3.4'
 
 	def compile_scripts(args = nil)
 
@@ -30,6 +30,9 @@ class Nyx
 			dirpath = './'
 			silent = false
 		end#if
+
+		# @todo remove
+		silent = true
 
 		dirpath = File.expand_path(dirpath) + '/'
 
@@ -164,6 +167,9 @@ class Nyx
 			dirpath = './'
 			silent = false
 		end#if
+
+		# @todo remove
+		silent = true
 
 		if ! File.exist? dirpath
 			puts '  Err: target directory does not exist.'
@@ -394,7 +400,7 @@ class Nyx
 					# check if file is non-empty directory
 					if File.directory?(file) && ! (Dir.entries(file) - %w[ . .. ]).empty?
 						if ( ! silent)
-							puts "   moving  #{file.gsub(basedir, '')} => #{rootfile.gsub(basedir, '')}"
+#							puts "   moving  #{file.gsub(basedir, '')} => #{rootfile.gsub(basedir, '')}"
 						end#if
 						if ! File.exist? rootfile
 							begin
@@ -406,7 +412,7 @@ class Nyx
 						end#if
 					elsif ! File.directory?(file)
 						if ( ! silent)
-							puts "   moving  #{file.gsub(basedir, '')} => #{rootfile.gsub(basedir, '')}"
+#							puts "   moving  #{file.gsub(basedir, '')} => #{rootfile.gsub(basedir, '')}"
 						end#if
 						begin
 							FileUtils.cp(file, rootfile)
@@ -429,7 +435,7 @@ class Nyx
 		if ! File.exists? tmpdir + '/compiler.jar'
 			Dir.chdir tmpdir
 			if ! File.exists? tmpdir+"/closure.zip"
-				download("closure-compiler.googlecode.com", "/files/compiler-latest.zip", tmpdir+"/closure.zip")
+				download("dl.google.com", "/closure-compiler/compiler-latest.zip", tmpdir+"/closure.zip")
 			end
 			Zip::ZipFile.open(tmpdir+"/closure.zip") do |zipfile|
 				zipfile.each do |file|
