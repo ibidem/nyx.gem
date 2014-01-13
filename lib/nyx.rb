@@ -1,5 +1,5 @@
 # native
-require 'Logger'
+#require 'Logger'
 require 'fileutils'
 require 'net/http'
 require 'fileutils'
@@ -12,7 +12,30 @@ require 'fssm'
 
 class Nyx
 
-	VERSION = '1.3.4'
+	VERSION = '1.4.0'
+
+	def check_php(args)
+		if args.length != 0
+			dirpath = args[0].sub(/(\/)+$/,'')+'/'
+		else # no parameters, assume .
+			dirpath = './'
+		end#if
+
+		# imediate output
+		$stdout.sync = $stderr.sync = true
+
+		$stdout.puts
+		$stdout.puts " PHP syntax check"
+		$stdout.puts " ----------------------------------------------------"
+		error_code = self.error_scan(dirpath)
+		if (error_code == 0)
+			$stdout.puts "  finished checking; all files are valid"
+		end
+		$stdout.puts " ----------------------------------------------------"
+		$stdout.puts
+
+		exit error_code
+	end#def
 
 	def compile_scripts(args = nil)
 
@@ -520,6 +543,28 @@ class Nyx
 #
 # Helpers
 #
+
+	def error_scan(path)
+		errors = 0
+		Dir.glob(path+'/*') do |file|
+			next if file == '.' or file == '..'
+			if File.directory? file
+				errors += self.error_scan(file)
+			else # not directory
+				if file =~ /.*\.php$/
+					msg = `php -l #{file}`
+					if ! (msg =~ /^No syntax errors.*/)
+						$stdout.puts "  invalid #{file}"
+						$stdout.puts msg.strip
+						$stdout.puts
+						errors += 1
+					end
+				end
+			end
+		end#glob
+
+		return errors
+	end#def
 
 	def download(domain, file, to)
 		Net::HTTP.start(domain) do |http|

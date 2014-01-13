@@ -24,6 +24,7 @@ puts <<eos
    nyx compile:scripts <dir>  - compile scripts
    nyx watch:style <dir>      - initiate style monitors
    nyx compile:style <dir>    - compile style
+   nyx check:php <dir>        - check php syntax
 eos
 
 end#if

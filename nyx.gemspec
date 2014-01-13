@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
 	s.name        = 'nyx'
-	s.version     = '1.3.4'
+	s.version     = '1.4.1'
 	s.date        = '2013-08-09'
 	s.summary     = "project management helpers"
 	s.description = "Ibidem Project Utilities"
